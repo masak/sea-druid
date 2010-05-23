@@ -1,5 +1,5 @@
 all:
-	gcc -Wall -o druid druid.c
+	gcc -Wall -ansi -o druid druid.c
 
 clean:
 	rm -f druid
