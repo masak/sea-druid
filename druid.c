@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 const int BOARD_SIZE = 10;
 
@@ -16,7 +17,7 @@ void print_header() {
     printf("\n");
 }
 
-void print_board(int** pieces, int** heights) {
+void print_board(int **pieces, int **heights) {
     int row, col;
 
     print_header();
@@ -37,6 +38,13 @@ void print_board(int** pieces, int** heights) {
 }
 
 int main() {
-    print_board(0, 0);
+    int **pieces;
+    int **heights;
+
+    pieces  = malloc(sizeof (int) * BOARD_SIZE * BOARD_SIZE);
+    heights = malloc(sizeof (int) * BOARD_SIZE * BOARD_SIZE);
+
+    print_board(pieces, heights);
+
     return 0;
 }
