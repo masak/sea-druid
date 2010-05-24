@@ -1,3 +1,6 @@
 I implemented Druid in Perl 6, and it was kinda fun. Now, I'm attempting the
 same thing in C, in order to learn a bit more about C, and in order to be
 able to compare code in Perl 6 to code in C.
+
+This project is licensed under an Artistic 2.0 License. See LICENSE for
+details.
