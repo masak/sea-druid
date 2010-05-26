@@ -50,7 +50,7 @@ druid_game *new_druid_game(int size) {
     if (size < 1 || size > 26) {
         fprintf(stderr, "Illegal board size %d -- must be between 1 and 26",
                         size);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     new_game = malloc(sizeof (druid_game));
@@ -394,5 +394,5 @@ int main() {
 
     destroy_druid_game(game);
 
-    return 0;
+    return EXIT_SUCCESS;
 }
