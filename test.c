@@ -32,13 +32,17 @@ typedef struct {
     int *heights;
 } druid_game;
 
-const int ILLEGAL    = -1,
-          EMPTY      = 0,
-          VERTICAL   = 1,
-          HORIZONTAL = 2;
+enum color {
+    ILLEGAL = -1,
+    EMPTY,
+    VERTICAL,
+    HORIZONTAL
+};
 
-const int INVALID_MOVE = 0,
-          MOVE_MADE    = 1;
+enum move_result {
+    INVALID_MOVE,
+    MOVE_MADE
+};
 
 druid_game *new_druid_game(int size) {
     druid_game *new_game;
@@ -159,10 +163,10 @@ void _switch_player_on_turn(druid_game *game) {
 
 /* Bounds checking not made. Returns MOVE_MADE or INVALID_MOVE. */
 int _make_sarsen_move(druid_game *game, int row, int col) {
-    int color;
+    int present_color;
 
-    color = _color_at(game, row, col);
-    if (color != 0 && color != game->player_on_turn)
+    present_color = _color_at(game, row, col);
+    if (present_color != 0 && present_color != game->player_on_turn)
         return INVALID_MOVE;
 
     _set_color_at(game, row, col, game->player_on_turn);
