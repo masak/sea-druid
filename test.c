@@ -42,6 +42,12 @@ const int INVALID_MOVE = 0,
 druid_game *new_druid_game(int size) {
     druid_game *new_game;
 
+    if (size < 1 || size > 26) {
+        fprintf(stderr, "Illegal board size %d -- must be between 1 and 26",
+                        size);
+        exit(1);
+    }
+
     new_game = malloc(sizeof (druid_game));
     new_game->size = size;
     new_game->player_on_turn = VERTICAL;
