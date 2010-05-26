@@ -109,9 +109,7 @@ int parse_coord(druid_game *game, char *coord, char expected_stopper) {
 
 /* Coordinates are bounds-checked. */
 int color_at(druid_game *game, char *coord) {
-    int pos;
-
-    pos = parse_coord(game, coord, '\0');
+    int pos = parse_coord(game, coord, '\0');
     if (pos == ILLEGAL) {
         return ILLEGAL;
     }
@@ -126,9 +124,7 @@ int _color_at(druid_game *game, int row, int col) {
 
 /* Coordinates are bounds-checked. */
 int height_at(druid_game *game, char *coord) {
-    int pos;
-
-    pos = parse_coord(game, coord, '\0');
+    int pos = parse_coord(game, coord, '\0');
     if (pos == ILLEGAL) {
         return ILLEGAL;
     }
@@ -163,9 +159,7 @@ void _switch_player_on_turn(druid_game *game) {
 
 /* Bounds checking not made. Returns MOVE_MADE or INVALID_MOVE. */
 int _make_sarsen_move(druid_game *game, int row, int col) {
-    int present_color;
-
-    present_color = _color_at(game, row, col);
+    int present_color = _color_at(game, row, col);
     if (present_color != 0 && present_color != game->player_on_turn)
         return INVALID_MOVE;
 
@@ -178,13 +172,10 @@ int _make_sarsen_move(druid_game *game, int row, int col) {
 
 /* Coordinates are bounds-checked. Returns MOVE_MADE or INVALID_MOVE. */
 int make_sarsen_move(druid_game *game, char *coord) {
-    int pos, size;
-
-    pos = parse_coord(game, coord, '\0');
+    int pos = parse_coord(game, coord, '\0'), size = game->size;
     if (pos == ILLEGAL)
         return INVALID_MOVE;
 
-    size = game->size;
     return _make_sarsen_move(game, pos / size, pos % size);
 }
 
@@ -254,7 +245,7 @@ int _make_vlintel_move(druid_game *game, int row, int col) {
 
 /* Coordinates are bounds-checked. Returns MOVE_MADE or INVALID_MOVE. */
 int make_lintel_move(druid_game *game, char *coord) {
-    int pos1, pos2, row1, row2, temp, col1, col2, size;
+    int pos1, pos2, row1, row2, col1, col2, size;
 
     pos1 = parse_coord(game, coord, '-');
     if (pos1 == ILLEGAL)
@@ -268,7 +259,7 @@ int make_lintel_move(druid_game *game, char *coord) {
     row1 = pos1 / size;
     row2 = pos2 / size;
     if (row1 > row2) {
-        temp = row1;
+        int temp = row1;
         row1 = row2;
         row2 = temp;
     }
@@ -276,7 +267,7 @@ int make_lintel_move(druid_game *game, char *coord) {
     col1 = pos1 % size;
     col2 = pos2 % size;
     if (col1 > col2) {
-        temp = col1;
+        int temp = col1;
         col1 = col2;
         col2 = temp;
     }
@@ -295,9 +286,7 @@ int make_lintel_move(druid_game *game, char *coord) {
 }
 
 int main() {
-    druid_game *game;
-
-    game = new_druid_game(4);
+    druid_game *game = new_druid_game(4);
 
     is(game->size, 4, "game initialized with the right size");
     is(game->player_on_turn, VERTICAL, "vertical starts");
