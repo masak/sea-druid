@@ -31,6 +31,7 @@ typedef struct {
     int *colors;
     int *heights;
     int previous_move;
+    int finished;
 } druid_game;
 
 enum color {
@@ -60,6 +61,7 @@ druid_game *new_druid_game(int size) {
     new_game->colors = calloc(size * size, sizeof (int));
     new_game->heights = calloc(size * size, sizeof (int));
     new_game->previous_move = ILLEGAL;
+    new_game->finished = 0;
     return new_game;
 }
 
@@ -163,6 +165,55 @@ void _set_previous_move(druid_game *game, int row, int col) {
     game->previous_move = row * game->size + col;
 }
 
+int who_won(druid_game *game) {
+    int size = game->size, *visited, *queue, current = 0, end = 1,
+        previous_move = game->previous_move,
+        color = _color_at(game, previous_move / size, previous_move % size),
+        touched_one_side = 0, touched_other_side = 0;
+
+    if (game->previous_move == ILLEGAL)
+        return NONE;
+
+    visited = calloc(size * size, sizeof (int));
+    queue = malloc(sizeof (int) * size * size);
+    visited[previous_move] = 1;
+    queue[current] = previous_move;
+    for(; current < end; ++current) {
+        int row = queue[current] / size, col = queue[current] % size,
+            direction;
+
+        if (color == VERTICAL && row == 0)
+            ++touched_one_side;
+        if (color == HORIZONTAL && col == 0)
+            ++touched_one_side;
+        if (color == VERTICAL && row == size - 1)
+            ++touched_other_side;
+        if (color == HORIZONTAL && col == size - 1)
+            ++touched_other_side;
+        if (touched_one_side && touched_other_side)
+            break;
+
+        for (direction = 0; direction < 4; ++direction) {
+            int nrow = row, ncol = col, pos;
+            switch (direction) {
+                case 0: if (row == 0)        continue; nrow--; break;
+                case 1: if (col == size - 1) continue; ncol++; break;
+                case 2: if (row == size - 1) continue; nrow++; break;
+                case 3: if (col == 0)        continue; ncol--; break;
+            }
+
+            pos = nrow * size + ncol;
+            if (!visited[pos]++ && _color_at(game, nrow, ncol) == color)
+                queue[end++] = pos;
+        }
+    }
+
+    free(visited);
+    free(queue);
+
+    return touched_one_side && touched_other_side ? color : NONE;
+}
+
 /* Bounds checking not made. Returns MOVE_MADE or INVALID_MOVE. */
 int _make_sarsen_move(druid_game *game, int row, int col) {
     int present_color = _color_at(game, row, col);
@@ -175,15 +226,6 @@ int _make_sarsen_move(druid_game *game, int row, int col) {
     _set_previous_move(game, row, col);
 
     return MOVE_MADE;
-}
-
-/* Coordinates are bounds-checked. Returns MOVE_MADE or INVALID_MOVE. */
-int make_sarsen_move(druid_game *game, char *coord) {
-    int pos = parse_coord(game, coord, '\0'), size = game->size;
-    if (pos == ILLEGAL)
-        return INVALID_MOVE;
-
-    return _make_sarsen_move(game, pos / size, pos % size);
 }
 
 /* Bounds checking not made. The variable 'col' refers to the left end of
@@ -253,18 +295,29 @@ int _make_vlintel_move(druid_game *game, int row, int col) {
 }
 
 /* Coordinates are bounds-checked. Returns MOVE_MADE or INVALID_MOVE. */
-int make_lintel_move(druid_game *game, char *coord) {
-    int pos1, pos2, row1, row2, col1, col2, size;
+int make_move(druid_game *game, char *move) {
+    int pos1, pos2, row1, row2, col1, col2, size = game->size;
 
-    pos1 = parse_coord(game, coord, '-');
+    if (game->finished)
+        return INVALID_MOVE;
+
+    pos1 = parse_coord(game, move, '\0');
+    if (pos1 != ILLEGAL) {
+        int result = _make_sarsen_move(game, pos1 / size, pos1 % size);
+        if (result == MOVE_MADE && who_won(game) != NONE) {
+            game->finished = 1;
+        }
+        return result;
+    }
+
+    pos1 = parse_coord(game, move, '-');
     if (pos1 == ILLEGAL)
         return INVALID_MOVE;
-    coord = strchr(coord, '-') + 1;
-    pos2 = parse_coord(game, coord, '\0');
+    move = strchr(move, '-') + 1;
+    pos2 = parse_coord(game, move, '\0');
     if (pos2 == ILLEGAL)
         return INVALID_MOVE;
 
-    size = game->size;
     row1 = pos1 / size;
     row2 = pos2 / size;
     if (row1 > row2) {
@@ -286,61 +339,22 @@ int make_lintel_move(druid_game *game, char *coord) {
     if (col2 >= size)
         return INVALID_MOVE;
 
-    if (row1 == row2 && col2 == col1 + 2)
-        return _make_hlintel_move(game, row1, col1);
-    else if (col1 == col2 && row2 == row1 + 2)
-        return _make_vlintel_move(game, row1, col1);
-    else
-        return INVALID_MOVE;
-}
-
-int who_won(druid_game *game) {
-    int size = game->size, *visited, *queue, current = 0, end = 1,
-        previous_move = game->previous_move,
-        color = _color_at(game, previous_move / size, previous_move % size),
-        touched_one_side = 0, touched_other_side = 0;
-
-    if (game->previous_move == ILLEGAL)
-        return NONE;
-
-    visited = calloc(size * size, sizeof (int));
-    queue = malloc(sizeof (int) * size * size);
-    visited[previous_move] = 1;
-    queue[current] = previous_move;
-    for(; current < end; ++current) {
-        int row = queue[current] / size, col = queue[current] % size,
-            direction;
-
-        if (color == VERTICAL && row == 0)
-            ++touched_one_side;
-        if (color == HORIZONTAL && col == 0)
-            ++touched_one_side;
-        if (color == VERTICAL && row == size - 1)
-            ++touched_other_side;
-        if (color == HORIZONTAL && col == size - 1)
-            ++touched_other_side;
-        if (touched_one_side && touched_other_side)
-            break;
-
-        for (direction = 0; direction < 4; ++direction) {
-            int nrow = row, ncol = col, pos;
-            switch (direction) {
-                case 0: if (row == 0)        continue; nrow--; break;
-                case 1: if (col == size - 1) continue; ncol++; break;
-                case 2: if (row == size - 1) continue; nrow++; break;
-                case 3: if (col == 0)        continue; ncol--; break;
-            }
-
-            pos = nrow * size + ncol;
-            if (!visited[pos]++ && _color_at(game, nrow, ncol) == color)
-                queue[end++] = pos;
+    {
+        int result;
+        if (row1 == row2 && col2 == col1 + 2) {
+            result = _make_hlintel_move(game, row1, col1);
         }
+        else if (col1 == col2 && row2 == row1 + 2) {
+            result = _make_vlintel_move(game, row1, col1);
+        }
+        else {
+            return INVALID_MOVE;
+        }
+        if (result == MOVE_MADE && who_won(game) != NONE) {
+            game->finished = 1;
+        }
+        return result;
     }
-
-    free(visited);
-    free(queue);
-
-    return touched_one_side && touched_other_side ? color : NONE;
 }
 
 int main() {
@@ -351,21 +365,21 @@ int main() {
     is(color_at(game, "b2"), NONE, "the board is empty at the start");
     is(height_at(game, "b2"), 0, "the board is flat at the start");
 
-    is(make_sarsen_move(game, "b2"), MOVE_MADE, "sarsen move works");
+    is(make_move(game, "b2"), MOVE_MADE, "sarsen move works");
     is(color_at(game, "b2"), VERTICAL, "color changed at the position");
     is(height_at(game, "b2"), 1, "height has increased by one");
     is(game->player_on_turn, HORIZONTAL, "it is now horizontal's turn");
 
-    is(make_sarsen_move(game, "b2"), INVALID_MOVE, "can't put sarsen there");
-    is(make_lintel_move(game, "a2-c2"), INVALID_MOVE,
+    is(make_move(game, "b2"), INVALID_MOVE, "can't put sarsen there");
+    is(make_move(game, "a2-c2"), INVALID_MOVE,
         "lintel can't rest on a single sarsen in the middle");
-    is(make_lintel_move(game, "b2-d2"), INVALID_MOVE,
+    is(make_move(game, "b2-d2"), INVALID_MOVE,
         "lintel can't rest on a single sarsen at one end");
-    is(make_lintel_move(game, "a1-c1"), INVALID_MOVE,
+    is(make_move(game, "a1-c1"), INVALID_MOVE,
         "can't put lintel on ground");
 
-    make_sarsen_move(game, "b1");
-    make_sarsen_move(game, "b4");
+    make_move(game, "b1");
+    make_move(game, "b4");
 
     /* The board now looks like this:
 
@@ -376,17 +390,17 @@ int main() {
        1 . H . . 1
          A B C D   */
 
-    is(make_lintel_move(game, "b1-b3"), INVALID_MOVE,
+    is(make_move(game, "b1-b3"), INVALID_MOVE,
         "lintel can't stick out in the air");
-    is(make_lintel_move(game, "b2-b4"), INVALID_MOVE,
+    is(make_move(game, "b2-b4"), INVALID_MOVE,
         "lintel must rest on two same-colored pieces");
 
-    make_sarsen_move(game, "d1");
-    is(make_lintel_move(game, "b1-d1"), INVALID_MOVE,
+    make_move(game, "d1");
+    is(make_move(game, "b1-d1"), INVALID_MOVE,
         "lintel must rest on two same-colored pieces");
 
-    make_sarsen_move(game, "c3");
-    is(make_lintel_move(game, "b1-d1"), MOVE_MADE, "lintel on two pieces");
+    make_move(game, "c3");
+    is(make_move(game, "b1-d1"), MOVE_MADE, "lintel on two pieces");
     is(height_at(game, "b1"), 2, "lintel gets us to height 2 (a)");
     is(height_at(game, "c1"), 2, "lintel gets us to height 2 (b)");
     is(height_at(game, "d1"), 2, "lintel gets us to height 2 (c)");
@@ -401,53 +415,37 @@ int main() {
        1 . H H H 1
          A B C D   */
 
-    is(make_lintel_move(game, "c2-c4"), INVALID_MOVE,
+    is(make_move(game, "c2-c4"), INVALID_MOVE,
         "lintel can't lie on single sarsen in the middle");
-    is(make_lintel_move(game, "b2-b4"), MOVE_MADE, "lintel on two pieces");
+    is(make_move(game, "b2-b4"), MOVE_MADE, "lintel on two pieces");
 
-    make_sarsen_move(game, "c1");
-    is(make_lintel_move(game, "b1-b3"), MOVE_MADE,
-        "lintel on one opponent piece");
-
-    make_sarsen_move(game, "d1");
-    make_sarsen_move(game, "b2");
-
-    /* The board now looks like this:
-
-         A B C D
-       4 . V . . 4
-       3 . V V . 3
-       2 . V . . 2
-       1 . V H H 1
-         A B C D   */
-
-    is(make_lintel_move(game, "b1-d1"), MOVE_MADE,
-        "lintel on one opponent piece");
+    make_move(game, "c1");
+    is(make_move(game, "b1-b3"), MOVE_MADE, "lintel on one opponent piece");
 
     destroy_druid_game(game);
     game = new_druid_game(4);
 
-    make_sarsen_move(game, "a1");   make_sarsen_move(game, "d2");
-    make_sarsen_move(game, "a1");   make_sarsen_move(game, "d2");
-    make_sarsen_move(game, "b1");   make_sarsen_move(game, "d3");
-    make_sarsen_move(game, "c1");   make_sarsen_move(game, "d4");
-    make_sarsen_move(game, "c1");   make_sarsen_move(game, "d4");
+    make_move(game, "a1");   make_move(game, "d2");
+    make_move(game, "a1");   make_move(game, "d2");
+    make_move(game, "b1");   make_move(game, "d3");
+    make_move(game, "c1");   make_move(game, "d4");
+    make_move(game, "c1");   make_move(game, "d4");
 
-    is(make_lintel_move(game, "a1-c1"), MOVE_MADE,
+    is(make_move(game, "a1-c1"), MOVE_MADE,
         "three same-color pieces, but only two supporting (horizontal)");
 
-    is(make_lintel_move(game, "d2-d4"), MOVE_MADE,
+    is(make_move(game, "d2-d4"), MOVE_MADE,
         "three same-color pieces, but only two supporting (vertical)");
-    is(make_lintel_move(game, "a1-c1"), INVALID_MOVE,
+    is(make_move(game, "a1-c1"), INVALID_MOVE,
         "three same-color pieces (horizontal)");
-    make_sarsen_move(game, "a2");
-    is(make_lintel_move(game, "d2-d4"), INVALID_MOVE,
+    make_move(game, "a2");
+    is(make_move(game, "d2-d4"), INVALID_MOVE,
         "three same-color pieces (vertical)");
 
-    make_sarsen_move(game, "a3");
-    make_sarsen_move(game, "a4");
-    make_sarsen_move(game, "a3");
-    is(make_lintel_move(game, "a2-a4"), INVALID_MOVE,
+    make_move(game, "a3");
+    make_move(game, "a4");
+    make_move(game, "a3");
+    is(make_move(game, "a2-a4"), INVALID_MOVE,
         "lintel can't rest on a single sarsen in the middle");
 
     destroy_druid_game(game);
@@ -455,12 +453,13 @@ int main() {
 
     is(who_won(game), NONE, "no-one won before first move");
 
-    make_sarsen_move(game, "b3");   make_sarsen_move(game, "a3");
+    make_move(game, "b3");   make_move(game, "a3");
     is(who_won(game), NONE, "no-one won before the game is over");
-    make_sarsen_move(game, "b2");   make_sarsen_move(game, "a3");
-    make_sarsen_move(game, "b1");
+    make_move(game, "b2");   make_move(game, "a3");
+    make_move(game, "b1");
 
     is(who_won(game), VERTICAL, "vertical win");
+    is(make_move(game, "a3"), INVALID_MOVE, "can't move after win");
 
     destroy_druid_game(game);
 
