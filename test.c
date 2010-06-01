@@ -58,8 +58,8 @@ druid_game *new_druid_game(int size) {
     new_game = malloc(sizeof (druid_game));
     new_game->size = size;
     new_game->player_on_turn = VERTICAL;
-    new_game->colors = calloc(size * size, sizeof (int));
-    new_game->heights = calloc(size * size, sizeof (int));
+    new_game->colors = calloc((size_t)size * size, sizeof (int));
+    new_game->heights = calloc((size_t)size * size, sizeof (int));
     new_game->previous_move = ILLEGAL;
     new_game->finished = 0;
     return new_game;
@@ -174,7 +174,7 @@ int who_won(druid_game *game) {
     if (game->previous_move == ILLEGAL)
         return NONE;
 
-    visited = calloc(size * size, sizeof (int));
+    visited = calloc((size_t)size * size, sizeof (int));
     queue = malloc(sizeof (int) * size * size);
     visited[previous_move] = 1;
     queue[current] = previous_move;

@@ -46,5 +46,8 @@ int main() {
 
     print_board(pieces, heights);
 
+    free(heights);
+    free(pieces);
+
     return 0;
 }
