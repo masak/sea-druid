@@ -1,10 +1,10 @@
 all: druid
 
-druid: druid.c
-	gcc -Wall -ansi -o druid druid.c
+druid:
+	gcc -Wall -ansi -o druid src/druid.c
 
-test_suite: test.c
-	gcc -Wall -ansi -o test test.c
+test_suite:
+	gcc -Wall -ansi -o test src/game.c src/test.c
 
 test: test_suite
 	./test
