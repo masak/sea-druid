@@ -1,6 +1,6 @@
 all: druid
 
-druid:
+druid: src/game.c src/druid.c
 	gcc -Wall -ansi -o druid src/game.c src/druid.c
 
 test_suite:
