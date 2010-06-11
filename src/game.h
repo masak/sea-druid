@@ -38,6 +38,7 @@ int who_won(druid_game *);
 int _make_sarsen_move(druid_game *, int, int);
 int _make_hlintel_move(druid_game *, int, int);
 int _make_vlintel_move(druid_game *, int, int);
+int _make_passing_move(druid_game *);
 int make_move(druid_game *, char *);
 
 #endif

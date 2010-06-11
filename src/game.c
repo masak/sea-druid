@@ -203,12 +203,24 @@ int _make_vlintel_move(druid_game *game, int row, int col) {
     return MOVE_MADE;
 }
 
+/* Bounds checking not made. Returns MOVE_MADE or INVALID_MOVE. */
+int _make_passing_move(druid_game *game) {
+    _switch_player_on_turn(game);
+    _set_previous_move(game, 0, ILLEGAL);
+
+    return MOVE_MADE;
+}
+
 /* Coordinates are bounds-checked. Returns MOVE_MADE or INVALID_MOVE. */
 int make_move(druid_game *game, char *move) {
     int pos1, pos2, row1, row2, col1, col2, size = game->size;
 
     if (game->finished)
         return INVALID_MOVE;
+
+    if (strcmp(move, "pass") == 0) {
+        return _make_passing_move(game);
+    }
 
     pos1 = parse_coord(game, move, '\0');
     if (pos1 != ILLEGAL) {
