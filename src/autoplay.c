@@ -23,22 +23,47 @@ char *_coords_to_sarsen_move(druid_game *game, int row, int col) {
     return move;
 }
 
-typedef struct {
-    druid_game *game;
-    int opponent_color;
-} alpha_0_player;
+int opponent_of(int player) {
+    return player == HORIZONTAL ? VERTICAL : HORIZONTAL;
+}
+
+int pi_row_has_opponent_pieces(druid_game *game, int color, int row) {
+    int i, size = game->size;
+    if (color == VERTICAL) {
+        for (i = 0; i < size; ++i) {
+            if (_color_at(game, i, row) == HORIZONTAL) {
+                return 1;
+            }
+        }
+    }
+    else { /* color == HORIZONTAL */
+        for (i = 0; i < size; ++i) {
+            if (_color_at(game, row, i) == VERTICAL) {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+char *pi_coords_to_sarsen_move(druid_game *game, int color,
+                               int row, int col) {
+    return color == VERTICAL
+        ? _coords_to_sarsen_move(game, col, row)
+        : _coords_to_sarsen_move(game, row, col);
+}
 
 alpha_0_player *initialize_alpha_0_player(druid_game *game, int color) {
     alpha_0_player *player = malloc(sizeof(alpha_0_player));
     player->game = game;
-    player->opponent_color = color == VERTICAL ? HORIZONTAL : VERTICAL;
+    player->color = color;
 
     return player;
 }
 
 char *make_move_alpha_0(alpha_0_player *player) {
     druid_game *game = player->game;
-    int size = game->size, opponent_color = player->opponent_color;
+    int size = game->size, opponent_color = opponent_of(player->color);
     int row, col;
 
     do {
@@ -47,6 +72,67 @@ char *make_move_alpha_0(alpha_0_player *player) {
     } while (_color_at(game, row, col) == opponent_color);
 
     return _coords_to_sarsen_move(game, row, col);
+}
+
+alpha_1_player *initialize_alpha_1_player(druid_game *game, int color) {
+    alpha_1_player *player = malloc(sizeof(alpha_1_player));
+    player->game = game;
+    player->algorithm = ALPHA_1;
+    player->color = color;
+    player->current_row = ILLEGAL;
+
+    return player;
+}
+
+char *make_move_alpha_1(alpha_1_player *player) {
+    druid_game *game = player->game;
+    int row = player->current_row, color = player->color, size = game->size;
+
+    if (player->algorithm == ALPHA_1
+        && (row == ILLEGAL || pi_row_has_opponent_pieces(game, color, row))) {
+
+        int free_row_exists = 0;
+        for (row = 0; row < size; ++row) {
+            if (!pi_row_has_opponent_pieces(game, color, row)) {
+                free_row_exists = 1;
+                break;
+            }
+        }
+
+        if (free_row_exists) {
+            do {
+                row = rand() % size;
+            } while (pi_row_has_opponent_pieces(game, color, row));
+            player->current_row = row;
+            player->min_col = player->max_col = rand() % size;
+            return pi_coords_to_sarsen_move(game, color, row, player->min_col);
+        }
+        else {
+            player->algorithm = ALPHA_0;
+        }
+    }
+
+    if (player->algorithm == ALPHA_1) {
+        if (size - player->max_col > player->min_col) {
+            return pi_coords_to_sarsen_move(game, color,
+                                            row, ++player->max_col);
+        }
+        else {
+            return pi_coords_to_sarsen_move(game, color,
+                                            row, --player->min_col);
+        }
+    }
+    else { /* player->algorithm == ALPHA_0 */
+        int opponent_color = opponent_of(color);
+        int row, col;
+
+        do {
+            row = rand() % size;
+            col = rand() % size;
+        } while (_color_at(game, row, col) == opponent_color);
+
+        return _coords_to_sarsen_move(game, row, col);
+    }
 }
 
 int main() {
@@ -58,26 +144,29 @@ int main() {
 
     for (i = 0; i < ROUNDS; ++i) {
         druid_game *game = new_druid_game(8);
-        alpha_0_player **players = malloc(sizeof(alpha_0_player*) * 2);
+        alpha_0_player *player1;
+        alpha_1_player *player2;
         int j;
         int *disqualified = calloc(2, sizeof(int));
 
-        players[0] = initialize_alpha_0_player(game, VERTICAL);
-        players[1] = initialize_alpha_0_player(game, HORIZONTAL);
+        player1 = initialize_alpha_0_player(game, VERTICAL);
+        player2 = initialize_alpha_1_player(game, HORIZONTAL);
 
         for (j = 0; j < MAX_ALLOWED_MOVES; ++j) {
             char *move;
-            alpha_0_player *current_player = players[j % 2];
+            int move_result;
 
-            move = make_move_alpha_0(current_player);
-            if (make_move(game, move) == INVALID_MOVE) {
-                ++disqualified[j % 2];
-                free(move);
-                move = "pass";
-                make_move(game, move);
+            if (j % 2 == 0) {
+                move = make_move_alpha_0(player1);
             }
             else {
-                free(move);
+                move = make_move_alpha_1(player2);
+            }
+            move_result = make_move(game, move);
+            free(move);
+            if (move_result == INVALID_MOVE) {
+                ++disqualified[j % 2];
+                make_move(game, "pass");
             }
             if (game->finished) {
                 break;
@@ -99,7 +188,7 @@ int main() {
             printf("The first player, alpha_0, has attempted illegal moves.\n");
         }
         if (disqualified[1]) {
-            printf("The second player, alpha_0, has attempted illegal moves.\n");
+            printf("The second player, alpha_1, has attempted illegal moves.\n");
         }
 
         free(game);

@@ -14,12 +14,12 @@ enum color {
     ILLEGAL = -1,
     NONE,
     VERTICAL,
-    HORIZONTAL
+    HORIZONTAL,
 };
 
 enum move_result {
     INVALID_MOVE,
-    MOVE_MADE
+    MOVE_MADE,
 };
 
 druid_game *new_druid_game(int size);
