@@ -61,7 +61,7 @@ alpha_0_player *initialize_alpha_0_player(druid_game *game, int color) {
     return player;
 }
 
-char *make_move_alpha_0(alpha_0_player *player) {
+char *calculate_move_alpha_0(alpha_0_player *player) {
     druid_game *game = player->game;
     int size = game->size, opponent_color = opponent_of(player->color);
     int row, col;
@@ -84,7 +84,7 @@ alpha_1_player *initialize_alpha_1_player(druid_game *game, int color) {
     return player;
 }
 
-char *make_move_alpha_1(alpha_1_player *player) {
+char *calculate_move_alpha_1(alpha_1_player *player) {
     druid_game *game = player->game;
     int row = player->current_row, color = player->color, size = game->size;
 
@@ -135,33 +135,55 @@ char *make_move_alpha_1(alpha_1_player *player) {
     }
 }
 
-int main() {
-    const int ROUNDS = 10000, MAX_ALLOWED_MOVES = 300;
-    int i;
-    int vertical_wins = 0, horizontal_wins = 0, ties = 0;
+generic_player *initialize_player(druid_game *game, int algorithm, int color) {
+    generic_player *player = malloc(sizeof(generic_player));
+    player->algorithm = algorithm;
+    if (algorithm == ALPHA_0) {
+        player->player = (void *)initialize_alpha_0_player(game, color);
+    }
+    else if (algorithm == ALPHA_1) {
+        player->player = (void *)initialize_alpha_1_player(game, color);
+    }
+    else {
+        fprintf(stderr, "Illegal algorithm %d -- must be between 0 and %d\n",
+                        algorithm, NUMBER_OF_ALGORITHMS);
+        exit(EXIT_FAILURE);
+    }
+    return player;
+}
 
-    srand((unsigned) time(NULL)); 
+char *calculate_move(generic_player *player) {
+    if (player->algorithm == ALPHA_0) {
+        return calculate_move_alpha_0((alpha_0_player*) player->player);
+    }
+    else if (player->algorithm == ALPHA_1) {
+        return calculate_move_alpha_1((alpha_1_player*) player->player);
+    }
+
+    fprintf(stderr, "Illegal algorithm %d -- must be between 0 and %d\n",
+                    player->algorithm, NUMBER_OF_ALGORITHMS);
+    exit(EXIT_FAILURE);
+}
+
+void have_players_compete(int p1, int p2) {
+    const int ROUNDS = 10000, MAX_ALLOWED_MOVES = 300;
+    int vertical_wins = 0, horizontal_wins = 0, ties = 0;
+    int i;
 
     for (i = 0; i < ROUNDS; ++i) {
         druid_game *game = new_druid_game(8);
-        alpha_0_player *player1;
-        alpha_1_player *player2;
+        generic_player *player1, *player2;
         int j;
         int *disqualified = calloc(2, sizeof(int));
 
-        player1 = initialize_alpha_0_player(game, VERTICAL);
-        player2 = initialize_alpha_1_player(game, HORIZONTAL);
+        player1 = initialize_player(game, p1, VERTICAL);
+        player2 = initialize_player(game, p2, HORIZONTAL);
 
         for (j = 0; j < MAX_ALLOWED_MOVES; ++j) {
             char *move;
             int move_result;
 
-            if (j % 2 == 0) {
-                move = make_move_alpha_0(player1);
-            }
-            else {
-                move = make_move_alpha_1(player2);
-            }
+            move = calculate_move(j % 2 == 0 ? player1 : player2);
             move_result = make_move(game, move);
             free(move);
             if (move_result == INVALID_MOVE) {
@@ -185,16 +207,31 @@ int main() {
         }
 
         if (disqualified[0]) {
-            printf("The first player, alpha_0, has attempted illegal moves.\n");
+            printf("The first player, %s, has attempted illegal moves.\n",
+                   player1->name);
         }
         if (disqualified[1]) {
-            printf("The second player, alpha_1, has attempted illegal moves.\n");
+            printf("The second player, %s, has attempted illegal moves.\n",
+                   player2->name);
         }
 
         free(game);
     }
-    printf("Vertical wins: %d\nHorizontal wins: %d\nTies: %d\n",
-           vertical_wins, horizontal_wins, ties);
+    printf("%s against %s: %d-(%d)-%d\n",
+           algorithm_names[p1], algorithm_names[p2],
+           vertical_wins, ties, horizontal_wins);
+}
+
+int main() {
+    int p1, p2;
+
+    srand((unsigned) time(NULL)); 
+
+    for (p1 = 0; p1 < NUMBER_OF_ALGORITHMS; ++p1) {
+        for (p2 = 0; p2 < NUMBER_OF_ALGORITHMS; ++p2) {
+            have_players_compete(p1, p2);
+        }
+    }
 
     return 0;
 }
