@@ -14,4 +14,4 @@ autoplay: all
 	./druid --autoplay
 
 clean:
-	rm -f druid test autoplay
+	rm -f druid test
