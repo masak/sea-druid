@@ -15,7 +15,7 @@ int pi_row_has_opponent_pieces_outside_chain(druid_game *, int, int);
 int pi_chain_has_a_breach(druid_game *, int, int, int, int);
 int pi_chain_has_a_threat(druid_game *, int, int);
 
-const int NUMBER_OF_ALGORITHMS = 3;
+extern const int NUMBER_OF_ALGORITHMS;
 
 enum algorithm {
     ALPHA_0,
@@ -23,7 +23,7 @@ enum algorithm {
     ALPHA_2,
 };
 
-char *algorithm_names[] = { "alpha-0", "alpha-1", "alpha-2" };
+extern char *algorithm_names[];
 
 typedef struct {
     druid_game *game;

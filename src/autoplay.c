@@ -5,6 +5,9 @@
 #include "game.h"
 #include "autoplay.h"
 
+const int NUMBER_OF_ALGORITHMS = 3;
+char *algorithm_names[] = { "alpha-0", "alpha-1", "alpha-2" };
+
 /* Assumes that row and col are within bounds. */
 char *_coords_to_sarsen_move(druid_game *game, int row, int col) {
     char *move = malloc(sizeof(char) * 4);
