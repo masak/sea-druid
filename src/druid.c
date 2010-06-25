@@ -107,6 +107,7 @@ int main(int argc, char **argv) {
         free(computer_move);
         print_board(game);
     }
+    print_board(game);
     printf("%s won.\n", game->player_on_turn == VERTICAL
                             ? "horizontal" : "vertical");
 
