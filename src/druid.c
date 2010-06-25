@@ -1,8 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
 #include "game.h"
 #include "druid.h"
+#include "autoplay.h"
+
+const int NUMBER_OF_ALGORITHMS = 3;
+char *algorithm_names[] = { "alpha-0", "alpha-1", "alpha-2" };
 
 void print_header(druid_game *game) {
     int col;
@@ -46,12 +52,37 @@ void print_board(druid_game *game) {
     printf("\n");
 }
 
-int main() {
+void autoplay() {
+    int p1, p2;
+
+    for (p1 = 0; p1 < NUMBER_OF_ALGORITHMS; ++p1) {
+        for (p2 = 0; p2 < NUMBER_OF_ALGORITHMS; ++p2) {
+            have_players_compete(p1, p2);
+        }
+        printf("\n");
+    }
+}
+
+int main(int argc, char **argv) {
+    srand((unsigned) time(NULL)); 
+
+    if (argc == 2 && strcmp(argv[1], "--autoplay") == 0) {
+        autoplay();
+        exit(EXIT_SUCCESS);
+    }
+    if (argc != 1) {
+        printf("Unknown option.\n");
+        exit(EXIT_FAILURE);
+    }
+
     druid_game *game = new_druid_game(8);
     char *move = malloc(sizeof(char) * 80);
+    generic_player *computer_player
+        = initialize_player(game, ALPHA_2, HORIZONTAL);
 
-    while (1) {
-        print_board(game);
+    print_board(game);
+    while (!game->finished) {
+        char *computer_move;
         printf("%s> ", game->player_on_turn == VERTICAL
                         ? "vertical" : "horizontal");
         if (scanf("%s", move) == EOF) {
@@ -60,10 +91,26 @@ int main() {
         }
         if (make_move(game, move) == INVALID_MOVE) {
             printf("Illegal move.\n");
+            continue;
         }
+        if (game->finished) {
+            break;
+        }
+        computer_move = calculate_move(computer_player);
+        if (make_move(game, computer_move) == INVALID_MOVE) {
+            printf("%s tried to move %s, which is illegal. Aborting.\n",
+                   computer_player->name, computer_move);
+            free(computer_move);
+            exit(EXIT_FAILURE);
+        }
+        printf("%s makes move %s.\n", computer_player->name, computer_move);
+        free(computer_move);
+        print_board(game);
     }
+    printf("%s won.\n", game->player_on_turn == VERTICAL
+                            ? "horizontal" : "vertical");
 
     free(game);
 
-    return 0;
+    return EXIT_SUCCESS;
 }

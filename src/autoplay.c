@@ -1,12 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 
 #include "game.h"
 #include "autoplay.h"
-
-const int NUMBER_OF_ALGORITHMS = 3;
-char *algorithm_names[] = { "alpha-0", "alpha-1", "alpha-2" };
 
 /* Assumes that row and col are within bounds. */
 char *_coords_to_sarsen_move(druid_game *game, int row, int col) {
@@ -334,6 +330,7 @@ char *calculate_move_alpha_2(alpha_2_player *player) {
 generic_player *initialize_player(druid_game *game, int algorithm, int color) {
     generic_player *player = malloc(sizeof(generic_player));
     player->algorithm = algorithm;
+    player->name = algorithm_names[algorithm];
     if (algorithm == ALPHA_0) {
         player->player = (void *)initialize_alpha_0_player(game, color);
     }
@@ -422,19 +419,4 @@ void have_players_compete(int p1, int p2) {
     printf("%s against %s: %d-(%d)-%d\n",
            algorithm_names[p1], algorithm_names[p2],
            vertical_wins, ties, horizontal_wins);
-}
-
-int main() {
-    int p1, p2;
-
-    srand((unsigned) time(NULL)); 
-
-    for (p1 = 0; p1 < NUMBER_OF_ALGORITHMS; ++p1) {
-        for (p2 = 0; p2 < NUMBER_OF_ALGORITHMS; ++p2) {
-            have_players_compete(p1, p2);
-        }
-        printf("\n");
-    }
-
-    return EXIT_SUCCESS;
 }

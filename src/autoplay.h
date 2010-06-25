@@ -66,4 +66,6 @@ typedef struct {
 generic_player *initialize_player(druid_game *, int, int);
 char *calculate_move(generic_player *);
 
+void have_players_compete(int, int);
+
 #endif
