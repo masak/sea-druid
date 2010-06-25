@@ -278,36 +278,36 @@ char *calculate_move_alpha_2(alpha_2_player *player) {
     }
 
     if (player->algorithm == ALPHA_2) {
-        int still_expanding
-            = player->max_col < size - 1 || player->min_col > 0;
-        if (still_expanding) {
-            if (size - player->max_col > player->min_col) {
-                player->max_col += player->max_col < size - 2 ? 2 : 1;
-                return pi_coords_to_sarsen_move(game, color,
-                                                row, player->max_col);
+        int col;
+        if ((col = pi_chain_has_a_threat(game, color, row)) != -1) {
+            int height_one_side
+                    = pi_height_at(game, color, row, col - 1),
+                height_other_side
+                    = pi_height_at(game, color, row, col + 1);
+            if (height_one_side < height_other_side) {
+                return pi_coords_to_sarsen_move(game, color, row, col - 1);
+            }
+            else if (height_other_side < height_one_side) {
+                return pi_coords_to_sarsen_move(game, color, row, col + 1);
             }
             else {
-                player->min_col -= player->min_col >= 2 ? 2 : 1;
-                return pi_coords_to_sarsen_move(game, color,
-                                                row, player->min_col);
+                return pi_coords_to_hlintel_move(
+                        game, color, row, col - 1);
             }
         }
         else {
-            int col;
-            if ((col = pi_chain_has_a_threat(game, color, row)) != -1) {
-                int height_one_side
-                        = pi_height_at(game, color, row, col - 1),
-                    height_other_side
-                        = pi_height_at(game, color, row, col + 1);
-                if (height_one_side < height_other_side) {
-                    return pi_coords_to_sarsen_move(game, color, row, col - 1);
-                }
-                else if (height_other_side < height_one_side) {
-                    return pi_coords_to_sarsen_move(game, color, row, col + 1);
+            int still_expanding
+                = player->max_col < size - 1 || player->min_col > 0;
+            if (still_expanding) {
+                if (size - player->max_col > player->min_col) {
+                    player->max_col += player->max_col < size - 2 ? 2 : 1;
+                    return pi_coords_to_sarsen_move(game, color,
+                                                    row, player->max_col);
                 }
                 else {
-                    return pi_coords_to_hlintel_move(
-                            game, color, row, col - 1);
+                    player->min_col -= player->min_col >= 2 ? 2 : 1;
+                    return pi_coords_to_sarsen_move(game, color,
+                                                    row, player->min_col);
                 }
             }
             else {
