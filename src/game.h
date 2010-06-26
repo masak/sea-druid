@@ -33,6 +33,8 @@ void _set_color_at(druid_game *, int, int, int);
 void _set_height_at(druid_game *, int, int, int);
 void _increase_height_at(druid_game *, int, int);
 void _switch_player_on_turn(druid_game *);
+int _previous_move_row(druid_game *);
+int _previous_move_col(druid_game *);
 void _set_previous_move(druid_game *, int, int);
 int who_won(druid_game *);
 int _make_sarsen_move(druid_game *, int, int);

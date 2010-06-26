@@ -3,6 +3,8 @@
 
 int pi_color_at(druid_game *, int, int, int);
 int pi_height_at(druid_game *, int, int, int);
+int pi_previous_move_row(druid_game *, int);
+int pi_previous_move_col(druid_game *, int);
 
 char *_coords_to_sarsen_move(druid_game *, int, int);
 char *pi_coords_to_sarsen_move(druid_game *, int, int, int);
@@ -14,6 +16,8 @@ int pi_row_has_opponent_pieces(druid_game *, int, int);
 int pi_row_has_opponent_pieces_outside_chain(druid_game *, int, int);
 int pi_chain_has_a_breach(druid_game *, int, int, int, int);
 int pi_chain_has_a_threat(druid_game *, int, int);
+int pi_row_has_a_breach(druid_game *, int, int);
+int pi_row_has_a_threat(druid_game *, int, int);
 
 extern const int NUMBER_OF_ALGORITHMS;
 
@@ -21,6 +25,7 @@ enum algorithm {
     ALPHA_0,
     ALPHA_1,
     ALPHA_2,
+    ALPHA_3,
 };
 
 extern char *algorithm_names[];
@@ -56,6 +61,16 @@ typedef struct {
 
 alpha_2_player *initialize_alpha_2_player(druid_game *, int);
 char *calculate_move_alpha_2(alpha_2_player *);
+
+typedef struct {
+    druid_game *game;
+    int color;
+    int algorithm;
+    int current_row;
+} alpha_3_player;
+
+alpha_3_player *initialize_alpha_3_player(druid_game *, int);
+char *calculate_move_alpha_3(alpha_3_player *);
 
 typedef struct {
     void *player;

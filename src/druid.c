@@ -7,8 +7,8 @@
 #include "druid.h"
 #include "autoplay.h"
 
-const int NUMBER_OF_ALGORITHMS = 3;
-char *algorithm_names[] = { "alpha-0", "alpha-1", "alpha-2" };
+const int NUMBER_OF_ALGORITHMS = 4;
+char *algorithm_names[] = { "alpha-0", "alpha-1", "alpha-2", "alpha-3" };
 
 void print_header(druid_game *game) {
     int col;
@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
     druid_game *game = new_druid_game(8);
     char *move = malloc(sizeof(char) * 80);
     generic_player *computer_player
-        = initialize_player(game, ALPHA_2, HORIZONTAL);
+        = initialize_player(game, ALPHA_3, HORIZONTAL);
 
     print_board(game);
     while (!game->finished) {

@@ -119,6 +119,20 @@ void _switch_player_on_turn(druid_game *game) {
             : VERTICAL;
 }
 
+int _previous_move_row(druid_game *game) {
+    if (game->previous_move == ILLEGAL) {
+        return ILLEGAL;
+    }
+    return game->previous_move / game->size;
+}
+
+int _previous_move_col(druid_game *game) {
+    if (game->previous_move == ILLEGAL) {
+        return ILLEGAL;
+    }
+    return game->previous_move % game->size;
+}
+
 void _set_previous_move(druid_game *game, int row, int col) {
     game->previous_move = row * game->size + col;
 }

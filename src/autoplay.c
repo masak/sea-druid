@@ -69,6 +69,19 @@ int pi_height_at(druid_game *game, int color, int row, int col) {
             : _height_at(game, row, col);
 }
 
+int pi_previous_move_row(druid_game *game, int color) {
+    /* condition reversed because previous player has opposite color */
+    return color == HORIZONTAL
+            ? _previous_move_row(game)
+            : _previous_move_col(game);
+}
+
+int pi_previous_move_col(druid_game *game, int color) {
+    return color == HORIZONTAL
+            ? _previous_move_col(game)
+            : _previous_move_row(game);
+}
+
 int pi_row_has_opponent_pieces(druid_game *game, int color, int row) {
     int col, size = game->size, opponent_color = opponent_of(color);
     for (col = 0; col < size; ++col) {
@@ -124,12 +137,82 @@ int pi_chain_has_a_breach(druid_game *game, int color, int row,
     return 0;
 }
 
+int pi_row_has_a_breach(druid_game *game, int color, int row) {
+    int col, size = game->size;
+    int opponent_color = opponent_of(color), opponent_pieces = 0;
+    int cl2, cl1, ccc, cr1, cr2,
+        hl2, hl1, hhh, hr1, hr2;
+    int can_be_blocked;
+
+    for (col = 0; col < game->size; ++col) {
+        if (pi_color_at(game, color, row, col) == opponent_color) {
+            ++opponent_pieces;
+        }
+    }
+    if (opponent_pieces == 0) {
+        return 0;
+    }
+    if (opponent_pieces > 1) {
+        return 1;
+    }
+    for (col = 0; col < game->size; ++col) {
+        if (pi_color_at(game, color, row, col) == opponent_color) {
+            break;
+        }
+    }
+    if (col > 1) {
+        cl2 = pi_color_at(game, color, row, col - 2);
+        hl2 = pi_height_at(game, color, row, col - 2);
+    }
+    if (col > 0) {
+        cl1 = pi_color_at(game, color, row, col - 1);
+        hl1 = pi_height_at(game, color, row, col - 1);
+    }
+    ccc = pi_color_at(game, color, row, col);
+    hhh = pi_height_at(game, color, row, col);
+    if (col < size - 1) {
+        cr1 = pi_color_at(game, color, row, col + 1);
+        hr1 = pi_height_at(game, color, row, col + 1);
+    }
+    if (col < size - 2) {
+        cr2 = pi_color_at(game, color, row, col + 2);
+        hr2 = pi_height_at(game, color, row, col + 2);
+    }
+
+    can_be_blocked
+        = (col > 0 && col < size - 1 /* bridge */
+           && cl1 == color && cr1 == color
+           && hl1 == hr1)
+          ||
+          (col > 1                   /* intrusion from the left */
+           && cl2 == color && cl1 == color
+           && hl2 == hl1 && hl1 == hhh)
+          ||
+          (col < size - 2            /* intrusion from the right */
+           && cr1 == color && cr2 == color
+           && hhh == hr1 && hr1 == hr2)
+    ;
+
+    /* if we can't block the opponent piece, the row is breached */
+    return !can_be_blocked;
+}
+
 int pi_chain_has_a_threat(druid_game *game, int color, int row) {
     int col, size = game->size, opponent_color = opponent_of(color);
     for (col = 0; col < size; ++col) {
         if (pi_color_at(game, color, row, col) == opponent_color
             && pi_color_at(game, color, row, col - 1) == color
             && pi_color_at(game, color, row, col + 1) == color) {
+            return col;
+        }
+    }
+    return -1;
+}
+
+int pi_row_has_a_threat(druid_game *game, int color, int row) {
+    int col, size = game->size, opponent_color = opponent_of(color);
+    for (col = 0; col < size; ++col) {
+        if (pi_color_at(game, color, row, col) == opponent_color) {
             return col;
         }
     }
@@ -327,6 +410,115 @@ char *calculate_move_alpha_2(alpha_2_player *player) {
     }
 }
 
+alpha_3_player *initialize_alpha_3_player(druid_game *game, int color) {
+    alpha_3_player *player = malloc(sizeof(alpha_3_player));
+    player->game = game;
+    player->algorithm = ALPHA_3;
+    player->color = color;
+    player->current_row = ILLEGAL;
+
+    return player;
+}
+
+char *calculate_move_alpha_3(alpha_3_player *player) {
+    druid_game *game = player->game;
+    int row = player->current_row, color = player->color, size = game->size;
+    int prev_row = pi_previous_move_row(game, color),
+        prev_col = pi_previous_move_col(game, color);
+
+    if (player->algorithm == ALPHA_3
+        && (row == ILLEGAL || pi_row_has_a_breach(game, color, row))) {
+
+        int unbreached_row_exists = 0;
+        for (row = 0; row < size; ++row) {
+            if (!pi_row_has_a_breach(game, color, row)) {
+                unbreached_row_exists = 1;
+                break;
+            }
+        }
+        if (unbreached_row_exists) {
+            do {
+                row = rand() % size;
+            } while (row == prev_row
+                     || pi_row_has_a_breach(game, color, row));
+            player->current_row = row;
+        }
+        else {
+            player->algorithm = ALPHA_0;
+        }
+    }
+
+    if (player->algorithm == ALPHA_3) {
+        int col;
+
+        if ((col = pi_row_has_a_threat(game, color, row)) != -1) {
+            int cl2, cl1, ccc, cr1, cr2,
+                hl2, hl1, hhh, hr1, hr2;
+
+            if (col > 1) {
+                cl2 = pi_color_at(game, color, row, col - 2);
+                hl2 = pi_height_at(game, color, row, col - 2);
+            }
+            if (col > 0) {
+                cl1 = pi_color_at(game, color, row, col - 1);
+                hl1 = pi_height_at(game, color, row, col - 1);
+            }
+            ccc = pi_color_at(game, color, row, col);
+            hhh = pi_height_at(game, color, row, col);
+            if (col < size - 1) {
+                cr1 = pi_color_at(game, color, row, col + 1);
+                hr1 = pi_height_at(game, color, row, col + 1);
+            }
+            if (col < size - 2) {
+                cr2 = pi_color_at(game, color, row, col + 2);
+                hr2 = pi_height_at(game, color, row, col + 2);
+            }
+            if (col > 0 && col < size - 1
+                && cl1 == color && cr1 == color
+                && hl1 == hr1) {
+                return pi_coords_to_hlintel_move(game, color, row, col - 1);
+            }
+            else if (col > 1
+                     && cl2 == color && cl1 == color
+                     && hl2 == hl1 && hl1 == hhh) {
+                return pi_coords_to_hlintel_move(game, color, row, col - 2);
+            }
+            else if (col < size - 2
+                     && cr1 == color && cr2 == color
+                     && hhh == hr1 && hr1 == hr2) {
+                return pi_coords_to_hlintel_move(game, color, row, col);
+            }
+            else {
+                fprintf(stderr,
+                        "Theoretically unreachable condition. Aborting\n");
+                exit(EXIT_FAILURE);
+            }
+        }
+        else if (prev_col != ILLEGAL
+                 && pi_color_at(game, color, row, prev_col) == NONE) {
+            return pi_coords_to_sarsen_move(game, color, row, prev_col);
+        }
+        else {
+            do {
+                col = rand() % size;
+            } while (pi_color_at(game, color, row, col) != NONE);
+
+            return pi_coords_to_sarsen_move(game, color, row, col);
+        }
+    }
+    else { /* player->algorithm == ALPHA_0 */
+        int opponent_color = opponent_of(color);
+        int row, col;
+
+        do {
+            row = rand() % size;
+            col = rand() % size;
+        } while (_color_at(game, row, col) == opponent_color);
+
+        return _coords_to_sarsen_move(game, row, col);
+    }
+}
+
 generic_player *initialize_player(druid_game *game, int algorithm, int color) {
     generic_player *player = malloc(sizeof(generic_player));
     player->algorithm = algorithm;
@@ -339,6 +531,9 @@ generic_player *initialize_player(druid_game *game, int algorithm, int color) {
     }
     else if (algorithm == ALPHA_2) {
         player->player = (void *)initialize_alpha_2_player(game, color);
+    }
+    else if (algorithm == ALPHA_3) {
+        player->player = (void *)initialize_alpha_3_player(game, color);
     }
     else {
         fprintf(stderr, "Illegal algorithm %d -- must be between 0 and %d\n",
@@ -357,6 +552,9 @@ char *calculate_move(generic_player *player) {
     }
     else if (player->algorithm == ALPHA_2) {
         return calculate_move_alpha_2((alpha_2_player*) player->player);
+    }
+    else if (player->algorithm == ALPHA_3) {
+        return calculate_move_alpha_3((alpha_3_player*) player->player);
     }
 
     fprintf(stderr, "Illegal algorithm %d -- must be between 0 and %d\n",
@@ -406,12 +604,14 @@ void have_players_compete(int p1, int p2) {
         }
 
         if (disqualified[0]) {
-            printf("The first player, %s, has attempted illegal moves.\n",
-                   player1->name);
+            fprintf(stderr,
+                    "The first player, %s, has attempted illegal moves.\n",
+                    player1->name);
         }
         if (disqualified[1]) {
-            printf("The second player, %s, has attempted illegal moves.\n",
-                   player2->name);
+            fprintf(stderr,
+                    "The second player, %s, has attempted illegal moves.\n",
+                    player2->name);
         }
 
         free(game);
