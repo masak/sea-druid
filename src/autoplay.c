@@ -616,7 +616,9 @@ void have_players_compete(int p1, int p2) {
 
         free(game);
     }
-    printf("%s against %s: %d-(%d)-%d\n",
+    printf("%s against %s: %5.2f%%-(%5.2f%%)-%5.2f%%\n",
            algorithm_names[p1], algorithm_names[p2],
-           vertical_wins, ties, horizontal_wins);
+           vertical_wins   * 100.0 / ROUNDS,
+           ties            * 100.0 / ROUNDS,
+           horizontal_wins * 100.0 / ROUNDS);
 }
