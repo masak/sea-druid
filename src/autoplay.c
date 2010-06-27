@@ -182,7 +182,7 @@ int pi_row_has_a_breach(druid_game *game, int color, int row) {
     can_be_blocked
         = (col > 0 && col < size - 1 /* bridge */
            && cl1 == color && cr1 == color
-           && hl1 == hr1)
+           && hhh <= hl1 && hl1 == hr1)
           ||
           (col > 1                   /* intrusion from the left */
            && cl2 == color && cl1 == color
@@ -475,7 +475,7 @@ char *calculate_move_alpha_3(alpha_3_player *player) {
             }
             if (col > 0 && col < size - 1
                 && cl1 == color && cr1 == color
-                && hl1 == hr1) {
+                && hhh <= hl1 && hl1 == hr1) {
                 return pi_coords_to_hlintel_move(game, color, row, col - 1);
             }
             else if (col > 1
