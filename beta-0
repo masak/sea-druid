@@ -1,0 +1,269 @@
+#! /usr/bin/env perl -w
+use 5.010;
+use strict;
+
+my $SIZE = 10;
+
+my %board = (
+);
+
+my %neighbors_of;
+
+sub add_neighbors_to {
+    my ($node, @new_neighbors) = @_;
+    push @{$neighbors_of{$node} //= []}, @new_neighbors;
+    return;
+}
+
+sub connect_nodes {
+    my ($here, $there) = @_;
+    add_neighbors_to($here, $there);
+    add_neighbors_to($there, $here);
+}
+
+sub add_node {
+    my ($node, @new_neighbors) = @_;
+    add_neighbors_to($node, @new_neighbors);
+    add_neighbors_to($_, $node) for @new_neighbors;
+}
+
+sub remove_node {
+    my ($node) = @_;
+    for my $neighbor (@{$neighbors_of{$node} // []}) {
+        @{$neighbors_of{$neighbor}}
+            = grep { $_ ne $node } @{$neighbors_of{$neighbor}};
+    }
+    delete $neighbors_of{$node};
+}
+
+sub implode_node {
+    my ($node) = @_;
+    my @neighbors = @{$neighbors_of{$node} // []};
+    for my $neighbor (@{$neighbors_of{$node} // []}) {
+        add_neighbors_to($neighbor, grep { $_ ne $neighbor } @neighbors);
+    }
+    remove_node($node);
+}
+
+sub create_graph_for {
+    my ($player) = @_;
+    my $opponent = $player eq 'H' ? 'V' : 'H';
+
+    %neighbors_of = ();
+    for my $row (1 .. $SIZE-1) {
+        for my $column (1 .. $SIZE) {
+            connect_nodes("$row, $column", ($row+1) . ", $column");
+        }
+    }
+    for my $column (1 .. $SIZE-1) {
+        for my $row (1 .. $SIZE) {
+            connect_nodes("$row, $column", "$row, " . ($column+1));
+        }
+    }
+
+    if ($player eq 'V') {
+        add_node("alpha_V", map { "1, $_"     } 1..$SIZE);
+        add_node("omega_V", map { "$SIZE, $_" } 1..$SIZE);
+    }
+    else {
+        add_node("alpha_H", map { "$_, 1"     } 1..$SIZE);
+        add_node("omega_H", map { "$_, $SIZE" } 1..$SIZE);
+    }
+
+    for my $node (keys %board) {
+        if ($board{$node} eq $opponent) {
+            remove_node($node);
+        }
+    }
+    for my $node (keys %board) {
+        if ($board{$node} eq $player) {
+            implode_node($node);
+        }
+    }
+}
+
+sub find_shortest_path {
+    my ($source, $sink) = @_;
+
+    my %distances;
+    $distances{$source} = 0;
+    my @queue = @{$neighbors_of{$source}};
+    while (@queue) {
+        my $node = shift @queue;
+        next if exists $distances{$node};
+        my $neighbors_min_distance = $SIZE * $SIZE;
+        for my $neighbor (@{$neighbors_of{$node}}) {
+            if (exists($distances{$neighbor})) {
+                if ($neighbors_min_distance > $distances{$neighbor}) {
+                    $neighbors_min_distance = $distances{$neighbor};
+                }
+            }
+            else {
+                push @queue, $neighbor;
+            }
+        }
+        $distances{$node} = $neighbors_min_distance + 1;
+    }
+
+    return () unless exists $distances{$sink};
+
+    my %saved_distances;
+    @queue = $sink;
+    while (@queue) {
+        my $node = shift @queue;
+        next if exists $saved_distances{$node};
+        $saved_distances{$node} = $distances{$node};
+        my $neighbors_min_distance = $SIZE * $SIZE;
+        for my $neighbor (@{$neighbors_of{$node}}) {
+            if ($distances{$neighbor} < $distances{$node}
+                && $neighbors_min_distance > $distances{$neighbor}) {
+                $neighbors_min_distance = $distances{$neighbor};
+            }
+        }
+        for my $neighbor (@{$neighbors_of{$node}}) {
+            if ($neighbors_min_distance == $distances{$neighbor}) {
+                push @queue, $neighbor;
+            }
+        }
+    }
+    delete @saved_distances{$source, $sink};
+
+    return %saved_distances;
+}
+
+while (1) {
+    create_graph_for("V");
+    my %distances_V = find_shortest_path("alpha_V", "omega_V");
+
+    create_graph_for("H");
+    my %distances_H = find_shortest_path("alpha_H", "omega_H");
+
+    print '    ';
+    for my $column (1..$SIZE) {
+        print chr(ord('A') + $column - 1), ' ';
+    }
+    print '     ';
+    for my $column (1..$SIZE) {
+        print chr(ord('A') + $column - 1), ' ';
+    }
+    print "\n";
+    for my $row (1..$SIZE) {
+        printf '%2d ', $row;
+        for my $column (1..$SIZE) {
+            my $pos = "$row, $column";
+            printf "%2s", ($board{$pos} // $distances_V{$pos} // '.');
+        }
+        printf '  %2d ', $row;
+        for my $column (1..$SIZE) {
+            my $pos = "$row, $column";
+            printf "%2s", ($board{$pos} // $distances_H{$pos} // '.');
+        }
+        print "\n";
+    }
+
+    my %possible_moves;
+    if (keys(%distances_V) == 0 && keys(%distances_H) == 0) {
+        %possible_moves = ();
+    }
+    elsif (keys(%distances_V) == 0) {
+        %possible_moves = %distances_H;
+    }
+    elsif (keys(%distances_H) == 0) {
+        %possible_moves = %distances_V;
+    }
+    else {
+        for my $key (keys %distances_V) {
+            if (exists $distances_H{$key}) {
+                $possible_moves{$key} = '*';
+            }
+        }
+    }
+    my $m = keys %possible_moves;
+    say '';
+    say $m, ' possible move', $m == 1 ? '' : 's';
+    die "Giving up.\n" unless $m;
+    say '';
+
+    print '   ';
+    for my $column (1..$SIZE) {
+        print chr(ord('A') + $column - 1), ' ';
+    }
+    print "\n";
+    for my $row (1..$SIZE) {
+        printf '%2d ', $row;
+        for my $column (1..$SIZE) {
+            my $pos = "$row, $column";
+            print(($board{$pos} // $possible_moves{$pos} // '.'), ' ');
+        }
+        print "\n";
+    }
+
+    my $move = (keys %possible_moves)[int rand $m];
+    say '';
+    say "Picking ", chr(ord('A') - 1 + substr($move, index($move, ',') + 1)),
+                    substr($move, 0, index($move, ','));
+    say '';
+
+    $board{$move} = 'V';
+
+    print '   ';
+    for my $column (1..$SIZE) {
+        print chr(ord('A') + $column - 1), ' ';
+    }
+    print "\n";
+    for my $row (1..$SIZE) {
+        printf '%2d ', $row;
+        for my $column (1..$SIZE) {
+            my $pos = "$row, $column";
+            print(($board{$pos} // '.'), ' ');
+        }
+        print "\n";
+    }
+    say '';
+
+    while (1) {
+        print 'Horizontal> ';
+        my $player_move = <>;
+        unless ($player_move) {
+            say '';
+            exit;
+        }
+        chomp $player_move;
+        $player_move = uc $player_move;
+        if ($player_move =~ /^([A-Z])(\d+)$/
+            && ord($1) - ord('A') < $SIZE
+            && $2 > 0 && $2 <= $SIZE) {
+
+            my $row = $2;
+            my $column = ord($1) - ord('A') + 1;
+            my $pos = "$row, $column";
+            if (!exists $board{$pos} || $board{$pos} ne 'V') {
+                $board{$pos} = 'H';
+                last;
+            }
+        }
+        elsif ($player_move =~ /^([A-Z])(\d+)-([A-Z])(\d+)$/
+                && ord($1) - ord('A') < $SIZE
+                && $2 > 0 && $2 <= $SIZE
+                && ord($3) - ord('A') < $SIZE
+                && $4 > 0 && $4 <= $SIZE) {
+
+            my $from_row = $2;
+            my $from_column = ord($1) - ord('A') + 1;
+            my $to_row = $4;
+            my $to_column = ord($3) - ord('A') + 1;
+            if (($from_row == $to_row && abs($from_column - $to_column) == 2)
+             || ($from_column == $to_column && abs($from_row - $to_row) == 2)) {
+
+                my $middle_row = ($from_row + $to_row) / 2;
+                my $middle_column = ($from_column + $to_column) / 2;
+                $board{"$from_row, $from_column"} = 'H';
+                $board{"$middle_row, $middle_column"} = 'H';
+                $board{"$to_row, $to_column"} = 'H';
+                last;
+            }
+        }
+        say "Illegal move. Try again.";
+    }
+    say '';
+}
